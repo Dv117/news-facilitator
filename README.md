@@ -173,7 +173,26 @@ git commit -m "Actualizo fuentes"
 git push
 ```
 
-Si cambias `style.css` o `app.js` y no ves los cambios, sube la versión del service worker en `sw.js` (`const VERSION = 'news-facilitator-v1.0.1';`). Eso invalida la caché antigua. También puedes usar **Ajustes → Borrar caché y datos** dentro de la app.
+#### Cómo saber si tu navegador ya tiene la versión nueva
+
+Al pie de la página aparece la versión, por ejemplo **v1.2.0**. Compárala con `APP_VERSION` en `app.js`: si coinciden, estás viendo lo último.
+
+La app está pensada para actualizarse sola:
+
+1. Al cargar, el navegador busca un `sw.js` nuevo (`updateViaCache: 'none'`), sin quedarse con el de la caché HTTP.
+2. El service worker nuevo descarga los archivos con `cache: 'reload'`, así no guarda copias viejas.
+3. Al activarse, borra la caché anterior y **recarga las pestañas abiertas** una vez. No hace falta Ctrl+F5.
+
+Si aun así ves la versión vieja en el pie:
+
+| Situación | Qué hacer |
+|---|---|
+| Acabas de publicar y pasó menos de 1 min | Espera y recarga: GitHub Pages tarda en propagar |
+| El pie muestra una versión anterior | Cierra **todas** las pestañas del sitio y vuelve a abrir la URL |
+| Sigue igual | Dentro de la app: **Ajustes → Borrar caché y datos** (borra caché y desregistra el service worker) |
+| Quieres forzarlo en el ordenador | DevTools → **Application** → **Service Workers** → *Unregister* y recarga |
+
+> Cada vez que publiques cambios sube **las dos** versiones: `VERSION` en `sw.js` y `APP_VERSION` en `app.js`. Si solo cambias una, el aviso del pie y la caché dejarán de coincidir.
 
 ---
 
@@ -293,7 +312,7 @@ La app acepta parámetros: `?cat=politics`, `?cat=sports`, `?cat=tech`, `?lang=e
 | Solo cargan algunas fuentes | Límite 429 de un proxy (feeds nuevos en ráfaga) | La app muestra el resto. Añade tu clave gratuita en **Ajustes** o espera unos minutos |
 | Faltan imágenes | El feed no incluye miniatura | Se muestra un degradado con el nombre del medio (diseño previsto) |
 | Deportes muestra NBA/WNBA pero no MLS/NWSL | Los feeds de MLS (Guardian, Marca) sí necesitan proxy; NBA/WNBA van directos | Pulsa **Reintentar** o añade tu clave de rss2json: los feeds de fútbol volverán |
-| Cambios que no aparecen | Caché del service worker | Sube `VERSION` en `sw.js` o usa **Ajustes → Borrar caché y datos** |
+| Cambios que no aparecen | Caché del service worker | Mira la versión del pie; sube `VERSION` y `APP_VERSION`, o usa **Ajustes → Borrar caché y datos** |
 | 404 al entrar | Pages aún publicando o ruta incorrecta | Espera 1–2 min; revisa Settings → Pages; la URL debe terminar en `/news-facilitator/` |
 | La opción «Instalar» no aparece | Falta HTTPS, manifest o SW | Comprueba Application → Manifest y Service Workers en DevTools |
 | El feed de El País falla | Cambio de URL del medio | Actualiza `url` en `SOURCES`; el resto de fuentes sigue funcionando |

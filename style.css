@@ -1092,6 +1092,12 @@ ul {
   letter-spacing: 0.04em;
 }
 
+/* Versión visible: sirve para comprobar qué copia está viendo el navegador. */
+#versionLabel {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-soft);
+}
+
 /* -------------------------------------------------------------------------
    11. DIÁLOGO Y TOAST
    ------------------------------------------------------------------------- */

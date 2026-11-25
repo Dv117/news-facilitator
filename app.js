@@ -44,6 +44,11 @@
     },
   };
 
+  /* Se muestra en el pie y en la consola. Súbela a la vez que `VERSION`
+     en sw.js cada vez que publiques cambios: así puedes comprobar de un
+     vistazo qué versión está viendo el navegador. */
+  const APP_VERSION = '1.2.0';
+
   /* =======================================================================
      2. FUENTES
      -----------------------------------------------------------------------
@@ -1274,6 +1279,12 @@
         const keys = await caches.keys();
         await Promise.all(keys.map((key) => caches.delete(key)));
       }
+      // También se desregistra el service worker: así la próxima carga
+      // pide todo de la red y no puede quedarse con una copia antigua.
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((registration) => registration.unregister()));
+      }
     } catch { /* ignorar */ }
 
     els.settingsDialog.close();
@@ -1323,10 +1334,36 @@
       window.location.hostname === '127.0.0.1';
     if (!secure) return;
 
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').catch(() => {
+    // Si ya había un service worker controlando la página y entra una
+    // versión nueva, se recarga una sola vez para mostrar el shell nuevo.
+    // En la primera visita no hay controlador, así que no se recarga.
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    let reloading = false;
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || reloading) return;
+      reloading = true;
+      window.location.reload();
+    });
+
+    window.addEventListener('load', async () => {
+      try {
+        // updateViaCache:'none' evita que el navegador reutilice un sw.js
+        // viejo de su caché HTTP justo después de publicar una versión.
+        const registration = await navigator.serviceWorker.register('sw.js', {
+          updateViaCache: 'none',
+        });
+        registration.update().catch(() => {});
+
+        // Al volver a la pestaña se comprueba si hay una versión publicada.
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            registration.update().catch(() => {});
+          }
+        });
+      } catch {
         /* sin SW la app sigue funcionando, solo pierde el modo offline */
-      });
+      }
     });
   }
 
@@ -1439,6 +1476,7 @@
     els.toast = $('#toast');
     els.offlineBanner = $('#offlineBanner');
     els.yearLabel = $('#yearLabel');
+    els.versionLabel = $('#versionLabel');
   }
 
   function detectUILang() {
@@ -1493,6 +1531,7 @@
     registerServiceWorker();
 
     els.yearLabel.textContent = String(new Date().getFullYear());
+    if (els.versionLabel) els.versionLabel.textContent = 'v' + APP_VERSION;
     els.offlineBanner.hidden = navigator.onLine;
     els.installBtn.hidden = !(isIOS() && !isStandalone());
 
